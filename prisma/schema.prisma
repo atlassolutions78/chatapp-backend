@@ -23,4 +23,37 @@ model User {
   lastSeenAt             DateTime?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
+
+  initiatedCalls         CallHistory[] @relation("Caller")
+  participatedCalls      CallHistory[] @relation("Participants")
+}
+
+enum CallType {
+  audio
+  video
+}
+
+enum CallStatus {
+  ringing
+  answered
+  missed
+}
+
+model CallHistory {
+  id             String    @id @default(cuid())
+  channelId      String
+  streamCallId   String
+  callerId       String
+  caller         User      @relation("Caller", fields: [callerId], references: [id])
+  participantIds String[]
+  participants   User[]    @relation("Participants")
+  type           CallType
+  status         CallStatus @default(ringing)
+  startedAt      DateTime   @default(now())
+  answeredAt     DateTime?
+  endedAt        DateTime?
+  durationSeconds Int?
+
+  @@index([callerId])
+  @@index([channelId])
 }
