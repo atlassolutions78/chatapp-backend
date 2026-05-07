@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -30,6 +30,16 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiResponse({ status: 200, description: 'User found', type: UserResponseDto })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @Get(':id')
+  async findById(@Param('id') id: string) {
+    const user = await this.usersService.findPublicById(id);
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
   @ApiOperation({ summary: 'Update the current user profile' })
   @ApiResponse({
     status: 200,
@@ -44,5 +54,14 @@ export class UsersController {
   @Patch('me')
   updateMe(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(userId, dto);
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Permanently delete the current user account' })
+  @ApiResponse({ status: 204, description: 'Account deleted' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  deleteMe(@CurrentUser('id') userId: string) {
+    return this.usersService.deleteAccount(userId);
   }
 }

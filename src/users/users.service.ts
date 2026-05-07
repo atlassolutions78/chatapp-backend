@@ -31,6 +31,10 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  async findPublicById(id: string) {
+    return this.prisma.user.findUnique({ where: { id }, select: publicUserSelect });
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { email } });
   }
@@ -87,8 +91,26 @@ export class UsersService {
 
   normalizePhoneNumber(phoneNumber: string) {
     const trimmed = phoneNumber.trim();
-    const digits = trimmed.replace(/\D/g, '');
+    const digits = trimmed.replaceAll(/\D/g, '');
     return `${trimmed.startsWith('+') ? '+' : ''}${digits}`;
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    // Best-effort: remove from Stream Chat
+    try {
+      const serverClient = StreamChat.getInstance(
+        this.config.getOrThrow('STREAM_API_KEY'),
+        this.config.getOrThrow('STREAM_API_SECRET'),
+      );
+      await serverClient.deleteUser(userId, { mark_messages_deleted: true, hard_delete: true });
+    } catch {}
+
+    await this.prisma.$transaction([
+      // Must delete caller-owned histories first (FK constraint)
+      this.prisma.callHistory.deleteMany({ where: { callerId: userId } }),
+      // Delete user — Prisma cascades the implicit many-to-many join table automatically
+      this.prisma.user.delete({ where: { id: userId } }),
+    ]);
   }
 
   async syncStreamUser(user: {
