@@ -74,6 +74,12 @@ export class CallHistoryService {
     });
   }
 
+  async deleteEntry(id: string) {
+    const call = await this.prisma.callHistory.findUnique({ where: { id } });
+    if (!call) throw new NotFoundException('Call history not found');
+    await this.prisma.callHistory.delete({ where: { id } });
+  }
+
   async finish(id: string) {
     const call = await this.prisma.callHistory.findUnique({ where: { id } });
     if (!call) throw new NotFoundException('Call history not found');
