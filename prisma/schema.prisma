@@ -11,7 +11,7 @@ model User {
   firstName              String
   lastName               String
   username               String    @unique
-  email                  String    @unique
+  email                  String?   @unique
   phoneNumber            String?   @unique
   passwordHash           String
   hashedRefreshToken     String?

@@ -24,7 +24,6 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 
@@ -46,7 +45,10 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Validation error or email already in use' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error or email already in use',
+  })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
@@ -68,42 +70,6 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
-  }
-
-  @Post('verify-email')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Verify email with 6-digit code' })
-  @ApiResponse({
-    status: 200,
-    description: 'Email verified successfully',
-    schema: {
-      properties: {
-        user: { $ref: '#/components/schemas/UserResponseDto' },
-      },
-    },
-  })
-  @ApiResponse({ status: 400, description: 'Invalid or expired verification code' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  verifyEmail(@CurrentUser('id') userId: string, @Body() dto: VerifyEmailDto) {
-    return this.authService.verifyEmail(userId, dto.code);
-  }
-
-  @Post('resend-verification')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Resend email verification code' })
-  @ApiResponse({
-    status: 200,
-    description: 'Verification code sent',
-    schema: { properties: { message: { type: 'string' } } },
-  })
-  @ApiResponse({ status: 400, description: 'Email already verified' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  resendVerification(@CurrentUser('id') userId: string) {
-    return this.authService.resendVerification(userId);
   }
 
   @Post('forgot-password')
@@ -166,7 +132,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get current user' })
-  @ApiResponse({ status: 200, description: 'Current user', type: UserResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user',
+    type: UserResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   me(@CurrentUser('id') userId: string) {
     return this.authService.me(userId);
@@ -190,8 +160,15 @@ export class AuthController {
   @ApiOperation({
     summary: 'Redirect browser to app deep link for password reset',
   })
-  @ApiQuery({ name: 'token', required: true, description: 'Password reset token from email' })
-  @ApiResponse({ status: 200, description: 'HTML page that redirects to the app deep link' })
+  @ApiQuery({
+    name: 'token',
+    required: true,
+    description: 'Password reset token from email',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'HTML page that redirects to the app deep link',
+  })
   resetRedirect(@Query('token') token: string, @Res() res: Response) {
     const deepLink = `signalclone://reset-password?token=${encodeURIComponent(token ?? '')}`;
     const html = `<!DOCTYPE html>
