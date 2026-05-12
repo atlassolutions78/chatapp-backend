@@ -27,10 +27,12 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const existingEmail = await this.usersService.findByEmail(
-      dto.email.toLowerCase(),
-    );
-    if (existingEmail) throw new BadRequestException('Email already in use');
+    if (dto.email) {
+      const existingEmail = await this.usersService.findByEmail(
+        dto.email.toLowerCase(),
+      );
+      if (existingEmail) throw new BadRequestException('Email already in use');
+    }
 
     const base = dto.username.trim().toLowerCase();
     let username: string | null = null;
@@ -50,32 +52,22 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    const code = this.generateCode();
-    const codeExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
     const user = await this.prisma.user.create({
       data: {
         firstName: dto.firstName,
         lastName: dto.lastName,
         username,
-        email: dto.email.toLowerCase(),
+        email: dto.email ? dto.email.toLowerCase() : null,
         passwordHash,
-        verificationCode: code,
-        verificationCodeExpiry: codeExpiry,
+        emailVerified: true,
       },
     });
 
     await this.usersService.syncStreamUser(user);
 
-    try {
-      await this.mail.sendVerificationCode(user.email, code, user.firstName);
-    } catch {
-      // Email delivery failure is non-fatal — user can request a resend
-    }
-
     const tokens = await this.generateTokens(user.id, user.email);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
-    await this.usersService.syncStreamUser(user);
     return { user: this.sanitize(user), ...tokens };
   }
 
@@ -90,64 +82,6 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
     return { user: this.sanitize(user), ...tokens };
-  }
-
-  async verifyEmail(userId: string, code: string) {
-    const user = await this.usersService.findById(userId);
-    if (!user) throw new UnauthorizedException();
-
-    if (user.emailVerified)
-      throw new BadRequestException('Email already verified');
-
-    if (!user.verificationCode || !user.verificationCodeExpiry) {
-      throw new BadRequestException(
-        'No verification code found. Request a new one.',
-      );
-    }
-
-    if (new Date() > user.verificationCodeExpiry) {
-      throw new BadRequestException(
-        'Verification code expired. Request a new one.',
-      );
-    }
-
-    if (user.verificationCode !== code) {
-      throw new BadRequestException('Invalid verification code');
-    }
-
-    const updated = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        emailVerified: true,
-        verificationCode: null,
-        verificationCodeExpiry: null,
-      },
-    });
-
-    return { user: this.sanitize(updated) };
-  }
-
-  async resendVerification(userId: string) {
-    const user = await this.usersService.findById(userId);
-    if (!user) throw new UnauthorizedException();
-
-    if (user.emailVerified)
-      throw new BadRequestException('Email already verified');
-
-    const code = this.generateCode();
-    const codeExpiry = new Date(Date.now() + 10 * 60 * 1000);
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { verificationCode: code, verificationCodeExpiry: codeExpiry },
-    });
-
-    try {
-      await this.mail.sendVerificationCode(user.email, code, user.firstName);
-    } catch {
-      // Email delivery failure is non-fatal — code is saved in DB
-    }
-    return { message: 'Verification code sent' };
   }
 
   async forgotPassword(email: string) {
@@ -172,7 +106,7 @@ export class AuthService {
     const resetLink = appUrl
       ? `${appUrl}/api/auth/reset-redirect?token=${rawToken}`
       : `signalclone://reset-password?token=${rawToken}`;
-    await this.mail.sendPasswordReset(user.email, user.firstName, resetLink);
+    await this.mail.sendPasswordReset(user.email!, user.firstName, resetLink);
 
     return { message: 'If an account exists, a reset link has been sent.' };
   }
@@ -238,11 +172,7 @@ export class AuthService {
     return { token };
   }
 
-  private generateCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  }
-
-  private async generateTokens(userId: string, email: string) {
+  private async generateTokens(userId: string, email: string | null) {
     const payload: JwtPayload = { sub: userId, email };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
