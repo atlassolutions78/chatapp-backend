@@ -47,10 +47,12 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { phoneNumber } });
   }
 
-  async findAll() {
+  async findAll(query?: string) {
+    if (!query?.trim()) return [];
+
     return this.prisma.user.findMany({
+      where: { username: { equals: query.trim() } },
       select: publicUserSelect,
-      orderBy: { createdAt: 'desc' },
     });
   }
 
