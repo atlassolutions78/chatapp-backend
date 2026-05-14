@@ -54,6 +54,7 @@ export class CallHistoryService {
       body: `Incoming ${type} call`,
       priority: 'high',
       sound: 'default',
+      channelId: 'calls',
       data: {
         type: 'incoming_call',
         callId: dto.channelId,
