@@ -34,22 +34,9 @@ export class AuthService {
       if (existingEmail) throw new BadRequestException('Email already in use');
     }
 
-    const base = dto.username.trim().toLowerCase();
-    let username: string | null = null;
-    for (let i = 0; i < 10; i++) {
-      const suffix = Math.floor(Math.random() * 90) + 10; // 10–99
-      const candidate = `${base}${suffix}`;
-      const taken = await this.usersService.findByUsername(candidate);
-      if (!taken) {
-        username = candidate;
-        break;
-      }
-    }
-    if (!username) {
-      throw new BadRequestException(
-        'Could not generate a unique username — try a different preferred name',
-      );
-    }
+    const username = dto.username.trim().toLowerCase();
+    const taken = await this.usersService.findByUsername(username);
+    if (taken) throw new BadRequestException('Username already taken');
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 

@@ -15,53 +15,30 @@ const prisma = new PrismaClient({ adapter } as any);
 const PASSWORD = 'Password1!';
 
 const users = [
-  {
-    firstName: 'James',
-    lastName: 'Kariuki',
-    username: 'james_09',
-    email: 'james@bond.dev',
-  },
-  {
-    firstName: 'Alice',
-    lastName: 'Kimura',
-    username: 'alice_22',
-    email: 'alice@bond.dev',
-  },
-  {
-    firstName: 'Bob',
-    lastName: 'Ntwari',
-    username: 'bob_47',
-    email: 'bob@bond.dev',
-  },
-  {
-    firstName: 'Clara',
-    lastName: 'Osei',
-    username: 'clara_08',
-    email: 'clara@bond.dev',
-  },
-  {
-    firstName: 'David',
-    lastName: 'Mugisha',
-    username: 'david_33',
-    email: 'david@bond.dev',
-  },
-  {
-    firstName: 'Eve',
-    lastName: 'Uwitonze',
-    username: 'eve_15',
-    email: 'eve@bond.dev',
-  },
+  { firstName: 'Alpha', lastName: 'Bravo', username: 'alpha_bravo' },
+  { firstName: 'Charlie', lastName: 'Delta', username: 'charlie_delta' },
+  { firstName: 'Echo', lastName: 'Foxtrot', username: 'echo_foxtrot' },
+  { firstName: 'Golf', lastName: 'Hotel', username: 'golf_hotel' },
+  { firstName: 'India', lastName: 'Juliet', username: 'india_juliet' },
+  { firstName: 'Kilo', lastName: 'Lima', username: 'kilo_lima' },
+  { firstName: 'Mike', lastName: 'November', username: 'mike_november' },
+  { firstName: 'Oscar', lastName: 'Papa', username: 'oscar_papa' },
 ];
 
 async function main() {
   console.log('Seeding users...');
 
-  const seedEmails = users.map((u) => u.email);
-  const deleted = await prisma.user.deleteMany({
-    where: { email: { notIn: seedEmails } },
+  const seedUsernames = users.map((u) => u.username);
+  const staleUsers = await prisma.user.findMany({
+    where: { username: { notIn: seedUsernames } },
+    select: { id: true },
   });
-  if (deleted.count > 0)
+  const staleIds = staleUsers.map((u) => u.id);
+  if (staleIds.length > 0) {
+    await prisma.callHistory.deleteMany({ where: { callerId: { in: staleIds } } });
+    const deleted = await prisma.user.deleteMany({ where: { id: { in: staleIds } } });
     console.log(`  Removed ${deleted.count} stale user(s)`);
+  }
 
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
@@ -72,15 +49,13 @@ async function main() {
 
   for (const u of users) {
     const user = await prisma.user.upsert({
-      where: { email: u.email },
+      where: { username: u.username },
       update: {},
       create: {
         firstName: u.firstName,
         lastName: u.lastName,
         username: u.username,
-        email: u.email,
         passwordHash,
-        emailVerified: true,
       },
     });
 
@@ -90,7 +65,7 @@ async function main() {
       username: user.username,
     });
 
-    console.log(`  ✓ ${user.username} (${user.email})`);
+    console.log(`  ✓ ${user.username}`);
   }
 
   console.log(`\nAll users seeded. Password for all: "${PASSWORD}"`);

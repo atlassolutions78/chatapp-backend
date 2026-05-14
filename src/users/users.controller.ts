@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -18,16 +19,17 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @ApiOperation({ summary: 'Get all registered users' })
+  @ApiOperation({ summary: 'Find a user by exact username (case-sensitive)' })
+  @ApiQuery({ name: 'q', required: false, description: 'Exact username to look up' })
   @ApiResponse({
     status: 200,
-    description: 'List of all users',
+    description: 'Matching users, or empty array if no query provided',
     type: [UserResponseDto],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Query('q') q?: string) {
+    return this.usersService.findAll(q);
   }
 
   @ApiOperation({ summary: 'Get user by ID' })
