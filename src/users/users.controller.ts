@@ -19,8 +19,8 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @ApiOperation({ summary: 'Find a user by exact username (case-sensitive)' })
-  @ApiQuery({ name: 'q', required: false, description: 'Exact username to look up' })
+  @ApiOperation({ summary: 'Search users by username prefix (case-insensitive)' })
+  @ApiQuery({ name: 'q', required: false, description: 'Username prefix to search' })
   @ApiResponse({
     status: 200,
     description: 'Matching users, or empty array if no query provided',

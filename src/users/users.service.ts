@@ -48,11 +48,21 @@ export class UsersService {
   }
 
   async findAll(query?: string) {
-    if (!query?.trim()) return [];
+    const trimmed = query?.trim();
 
     return this.prisma.user.findMany({
-      where: { username: { equals: query.trim() } },
+      where: trimmed
+        ? {
+            OR: [
+              { username: { contains: trimmed, mode: 'insensitive' } },
+              { firstName: { contains: trimmed, mode: 'insensitive' } },
+              { lastName: { contains: trimmed, mode: 'insensitive' } },
+            ],
+          }
+        : undefined,
       select: publicUserSelect,
+      orderBy: { firstName: 'asc' },
+      take: 100,
     });
   }
 

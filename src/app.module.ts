@@ -4,7 +4,9 @@ import { AuthModule } from './auth/auth.module';
 import { CallHistoryModule } from './call-history/call-history.module';
 import { PresenceModule } from './presence/presence.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PushModule } from './push/push.module';
 import { UsersModule } from './users/users.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     PresenceModule,
     CallHistoryModule,
+    PushModule,
+    WebhooksModule,
   ],
 })
 export class AppModule {}
