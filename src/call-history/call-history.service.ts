@@ -48,13 +48,18 @@ export class CallHistoryService {
       },
     });
 
-    // Notify each participant (receivers) of the incoming call
+    // Notify each participant (receivers) of the incoming call.
+    // channelId 'calls' targets the MAX-importance Android channel so the
+    // heads-up / lock-screen notification appears immediately.
+    // ttl 30 s: if the device wakes up after the call is already gone the
+    // stale notification is discarded by the Expo push service.
     void this.push.sendToUsers(dto.participantIds, {
       title: callerName,
       body: `Incoming ${type} call`,
       priority: 'high',
-      sound: 'default',
       channelId: 'calls',
+      ttl: 30,
+      sound: 'default',
       data: {
         type: 'incoming_call',
         callId: dto.channelId,
@@ -94,7 +99,7 @@ export class CallHistoryService {
     }));
   }
 
-  async markAnswered(id: string, userId: string) {
+  async markAnswered(id: string, _userId: string) {
     const call = await this.prisma.callHistory.findUnique({ where: { id } });
     if (!call) throw new NotFoundException('Call history not found');
     return this.prisma.callHistory.update({
@@ -147,6 +152,7 @@ export class CallHistoryService {
         title: 'Missed call',
         body: `You missed a call from ${callerName}`,
         priority: 'normal',
+        channelId: 'default',
         sound: 'default',
         data: {
           type: 'missed_call',
