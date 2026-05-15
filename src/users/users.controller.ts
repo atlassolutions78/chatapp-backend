@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -8,7 +8,6 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PushTokenDto } from './dto/push-token.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UsersService } from './users.service';
@@ -57,24 +56,6 @@ export class UsersController {
   @Patch('me')
   updateMe(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(userId, dto);
-  }
-
-  @Post('me/push-token')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Register an Expo push token for the current user' })
-  @ApiResponse({ status: 204, description: 'Token saved' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  savePushToken(@CurrentUser('id') userId: string, @Body() dto: PushTokenDto) {
-    return this.usersService.savePushToken(userId, dto.token);
-  }
-
-  @Delete('me/push-token')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Remove an Expo push token (on sign out)' })
-  @ApiResponse({ status: 204, description: 'Token removed' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  removePushToken(@Body() dto: PushTokenDto) {
-    return this.usersService.removePushToken(dto.token);
   }
 
   @Delete('me')

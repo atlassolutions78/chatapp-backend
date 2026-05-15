@@ -26,7 +26,6 @@ model User {
 
   initiatedCalls         CallHistory[] @relation("Caller")
   participatedCalls      CallHistory[] @relation("Participants")
-  pushTokens             PushToken[]
 }
 
 enum CallType {
@@ -38,16 +37,6 @@ enum CallStatus {
   ringing
   answered
   missed
-}
-
-model PushToken {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  createdAt DateTime @default(now())
-
-  @@index([userId])
 }
 
 model CallHistory {

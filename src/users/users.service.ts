@@ -58,7 +58,11 @@ export class UsersService {
     const q = query.trim();
     return this.prisma.user.findMany({
       where: {
-        username: q,
+        OR: [
+          { username: { contains: q, mode: 'insensitive' } },
+          { firstName: { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+        ],
       },
       select: publicUserSelect,
       orderBy: { firstName: 'asc' },
@@ -88,26 +92,6 @@ export class UsersService {
 
     await this.syncStreamUser(updatedUser);
     return updatedUser;
-  }
-
-  async savePushToken(userId: string, token: string): Promise<void> {
-    await this.prisma.pushToken.upsert({
-      where: { token },
-      update: { userId },
-      create: { userId, token },
-    });
-  }
-
-  async removePushToken(token: string): Promise<void> {
-    await this.prisma.pushToken.deleteMany({ where: { token } });
-  }
-
-  async getPushTokensForUsers(userIds: string[]): Promise<string[]> {
-    const records = await this.prisma.pushToken.findMany({
-      where: { userId: { in: userIds } },
-      select: { token: true },
-    });
-    return records.map((r) => r.token);
   }
 
   async updateRefreshToken(
