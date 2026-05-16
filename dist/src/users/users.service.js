@@ -50,10 +50,7 @@ let UsersService = class UsersService {
     }
     async findAll(query) {
         if (!query?.trim()) {
-            return this.prisma.user.findMany({
-                select: publicUserSelect,
-                orderBy: { firstName: 'asc' },
-            });
+            return [];
         }
         const q = query.trim();
         return this.prisma.user.findMany({

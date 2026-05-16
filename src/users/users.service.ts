@@ -49,10 +49,7 @@ export class UsersService {
 
   async findAll(query?: string) {
     if (!query?.trim()) {
-      return this.prisma.user.findMany({
-        select: publicUserSelect,
-        orderBy: { firstName: 'asc' },
-      });
+      return [];
     }
 
     const q = query.trim();
