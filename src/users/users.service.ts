@@ -57,15 +57,8 @@ export class UsersService {
 
     const q = query.trim();
     return this.prisma.user.findMany({
-      where: {
-        OR: [
-          { username: { contains: q, mode: 'insensitive' } },
-          { firstName: { contains: q, mode: 'insensitive' } },
-          { lastName: { contains: q, mode: 'insensitive' } },
-        ],
-      },
+      where: { username: { equals: q } },
       select: publicUserSelect,
-      orderBy: { firstName: 'asc' },
     });
   }
 
