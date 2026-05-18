@@ -52,7 +52,7 @@ const stream_chat_1 = require("stream-chat");
 let NotificationsService = NotificationsService_1 = class NotificationsService {
     config;
     logger = new common_1.Logger(NotificationsService_1.name);
-    messaging;
+    messaging = null;
     streamClient;
     apiSecret;
     constructor(config) {
@@ -60,18 +60,25 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
         const apiKey = config.getOrThrow('STREAM_API_KEY');
         this.apiSecret = config.getOrThrow('STREAM_API_SECRET');
         this.streamClient = stream_chat_1.StreamChat.getInstance(apiKey, this.apiSecret);
-        if (!admin.apps.length) {
-            admin.initializeApp({
-                credential: admin.credential.cert({
-                    projectId: config.get('FIREBASE_PROJECT_ID'),
-                    privateKey: config
-                        .get('FIREBASE_PRIVATE_KEY')
-                        ?.replace(/\\n/g, '\n'),
-                    clientEmail: config.get('FIREBASE_CLIENT_EMAIL'),
-                }),
-            });
+    }
+    onModuleInit() {
+        try {
+            if (!admin.apps.length) {
+                admin.initializeApp({
+                    credential: admin.credential.cert({
+                        projectId: this.config.get('FIREBASE_PROJECT_ID'),
+                        privateKey: this.config
+                            .get('FIREBASE_PRIVATE_KEY')
+                            ?.replace(/\\n/g, '\n'),
+                        clientEmail: this.config.get('FIREBASE_CLIENT_EMAIL'),
+                    }),
+                });
+            }
+            this.messaging = admin.messaging();
         }
-        this.messaging = admin.messaging();
+        catch (err) {
+            this.logger.warn(`Firebase init failed, push notifications disabled: ${err}`);
+        }
     }
     verifyWebhookSignature(rawBody, signature) {
         const hmac = crypto
@@ -105,11 +112,12 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
                 });
             }
         });
-        if (!fcmTokens.length) {
+        if (!fcmTokens.length || !this.messaging) {
             this.logger.debug(`No FCM tokens found for recipients of ${channelId}`);
             return;
         }
-        await Promise.allSettled(fcmTokens.map((token) => this.messaging
+        const messaging = this.messaging;
+        await Promise.allSettled(fcmTokens.map((token) => messaging
             .send({
             token,
             data: {
