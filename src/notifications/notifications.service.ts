@@ -1,13 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
 import { StreamChat } from 'stream-chat';
 
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
-  private readonly messaging: admin.messaging.Messaging;
+  private messaging: admin.messaging.Messaging | null = null;
   private readonly streamClient: StreamChat;
   private readonly apiSecret: string;
 
@@ -15,19 +15,25 @@ export class NotificationsService {
     const apiKey = config.getOrThrow<string>('STREAM_API_KEY');
     this.apiSecret = config.getOrThrow<string>('STREAM_API_SECRET');
     this.streamClient = StreamChat.getInstance(apiKey, this.apiSecret);
+  }
 
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: config.get('FIREBASE_PROJECT_ID'),
-          privateKey: config
-            .get<string>('FIREBASE_PRIVATE_KEY')
-            ?.replace(/\\n/g, '\n'),
-          clientEmail: config.get('FIREBASE_CLIENT_EMAIL'),
-        }),
-      });
+  onModuleInit() {
+    try {
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId: this.config.get('FIREBASE_PROJECT_ID'),
+            privateKey: this.config
+              .get<string>('FIREBASE_PRIVATE_KEY')
+              ?.replace(/\\n/g, '\n'),
+            clientEmail: this.config.get('FIREBASE_CLIENT_EMAIL'),
+          }),
+        });
+      }
+      this.messaging = admin.messaging();
+    } catch (err) {
+      this.logger.warn(`Firebase init failed, push notifications disabled: ${err}`);
     }
-    this.messaging = admin.messaging();
   }
 
   verifyWebhookSignature(rawBody: Buffer, signature: string): boolean {
@@ -83,15 +89,16 @@ export class NotificationsService {
       }
     });
 
-    if (!fcmTokens.length) {
+    if (!fcmTokens.length || !this.messaging) {
       this.logger.debug(`No FCM tokens found for recipients of ${channelId}`);
       return;
     }
 
     // Send data-only HIGH-priority FCM — background handler shows notification
+    const messaging = this.messaging;
     await Promise.allSettled(
       fcmTokens.map((token) =>
-        this.messaging
+        messaging
           .send({
             token,
             data: {
