@@ -22,7 +22,8 @@ let PrismaService = class PrismaService extends client_1.PrismaClient {
         super({ adapter });
     }
     async onModuleInit() {
-        await this.$connect();
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Database connection timed out after 15s')), 15000));
+        await Promise.race([this.$connect(), timeout]);
     }
     async onModuleDestroy() {
         await this.$disconnect();
